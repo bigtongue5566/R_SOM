@@ -1,12 +1,13 @@
+set.seed(0)
 training <- function(data) {
   radius.shrink.rate <- 0.95
   learning.rate <- 0.9
   learning.rate.shrink.rate <- 0.95
-  x <- 10
-  y <- 10
+  x <- 20
+  y <- 20
   radius <- (x^2 + y^2)^0.5
   output.topology <- matrix(rep(0,x*y),x,y)
-  total.distances <- c()
+  average.total.distances <- c()
   count <- 0
   weights <- matrix(round(runif(ncol(data)*x*y),1),ncol(data))
   repeat {
@@ -38,13 +39,14 @@ training <- function(data) {
     }
     radius <- radius * radius.shrink.rate
     learning.rate <- learning.rate * learning.rate.shrink.rate
-    total.distances[count] <- total.distance
-    if (count >= 200 || mean(total.distances) < 1) {
+    average.total.distances[count] <- total.distance/nrow(data)
+    if (count >= 100) {
       break
     }
   }
   print(output.topology)
-  return(output.topology)
+  print(average.total.distances)
+  return(list(output.topology,average.total.distances))
 }
 recalling <- function(){
   
@@ -56,7 +58,17 @@ iris.petal.length <- scale(c(data.iris[,3]))
 iris.petal.width <- scale(c(data.iris[,4]))
 result <- training(cbind(iris.sepal.length,iris.sepal.width,iris.petal.length,iris.petal.width))
 
-persp(1:nrow(result),1:ncol(result),result,theta = 30, col = "cyan", phi = 20,ticktype = "detailed",shade = 0.75)
+topology <- result[[1]]
+average.distances <- result[[2]]
+
+# X11()
+# plot(average.distances,type = "l")
+
 #X11()
-#library(plot3D)
-#persp3D(1:nrow(result),1:ncol(result),result,theta = 30, phi = 20,ticktype = "detailed" )
+#persp(1:nrow(topology),1:ncol(topology),topology,theta = 30, col = "cyan", phi = 20,ticktype = "detailed")
+
+X11()
+library(rgl)
+persp3D(1:nrow(topology),1:ncol(topology),topology,theta = 30, phi = 20,ticktype = "detailed")
+
+
