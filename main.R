@@ -1,4 +1,4 @@
-set.seed(10)
+set.seed(0)
 
 calculate.nets <- function(input.vector,weights,x,y){
   nets <- matrix(colSums((input.vector - weights)^2),x,y)
@@ -11,16 +11,13 @@ find.winning.node <- function(nets){
 }
 
 
-training <- function(data) {
-  radius.shrink.rate <- 0.95
-  learning.rate <- 0.5
-  learning.rate.shrink.rate <- 0.95
-  x <- 5
-  y <- 5
+training <- function(data,xsize=10,ysize=10,training.rate=0.1,training.rate.shrink.rate=0.95,radius.shrink.rate=0.95) {
+  x <- xsize
+  y <- ysize
   radius <- (x^2 + y^2)^0.5
   average.total.distances <- c()
   count <- 0
-  weights <- matrix(round(runif(ncol(data)*x*y),2),ncol(data))
+  weights <- matrix(rep(0.5,x*y),ncol(data))  #matrix(round(runif(ncol(data)*x*y),2),ncol(data))
   repeat {
     output.topology <- matrix(rep(0,x*y),x,y)
     count <- count + 1
@@ -44,21 +41,21 @@ training <- function(data) {
         }
       }
       neighborhood <- exp(-distance/radius)
-      delta.weights = learning.rate * t(t(input.vector - weights)*c(neighborhood))
+      delta.weights = training.rate * t(t(input.vector - weights)*c(neighborhood))
       #update connecting weight matrix
       weights <- weights + delta.weights
     }
     radius <- radius * radius.shrink.rate
-    learning.rate <- learning.rate * learning.rate.shrink.rate
-    average.total.distances[count] <- total.distance/nrow(data)
-    if (count >= 100) {
+    training.rate <- training.rate * training.rate.shrink.rate
+    average.total.distances[count] <- total.distance
+    if (count >= 300) {
       break
     }
   }
   return(list(output.topology,average.total.distances))
 }
 
-recalling <- function(radius.shrink.rate=0.95, learning.rate=0.9, learning.rate.shrink.rate=0.95, xsize=10, ysize=10, weights, test.data){
+recalling <- function(radius.shrink.rate=0.95, training.rate=0.9, training.rate.shrink.rate=0.95, xsize=10, ysize=10, weights, test.data){
   nets <- calculate.nets(test.data,weights,xsize,ysize)
   winning.node <- find.winning.node(nets)
   return(winning.node)
@@ -71,21 +68,25 @@ iris.sepal.length <- scale(c(data.iris[,1]),center = FALSE)
 iris.sepal.width <- scale(c(data.iris[,2]),center = FALSE)
 iris.petal.length <- scale(c(data.iris[,3]),center = FALSE)
 iris.petal.width <- scale(c(data.iris[,4]),center = FALSE)
-result <- training(cbind(iris.sepal.length,iris.sepal.width,iris.petal.length,iris.petal.width))
+data.iris <- cbind(iris.sepal.length,iris.sepal.width,iris.petal.length,iris.petal.width)
+#randomize row
+data.iris <- data.iris[sample(nrow(data.iris)),]
+result <- training(data.iris)
 
 topology <- result[[1]]
 average.distances <- result[[2]]
 
 X11()
-plot(average.distances,type = "l")
+plot(average.distances,type = "l",xlab = "Iteration",ylab = "Error")
 
 #X11()
 #persp(1:nrow(topology),1:ncol(topology),topology,theta = 30, col = "cyan", phi = 20,ticktype = "detailed")
 
-library(plot3D)
-r3dDefaults$windowRect = c(0,0,720,720) 
+library(rgl)
+r3dDefaults$windowRect = c(50,50,720,720) 
 nbcol = 100
-color = rev(rainbow(nbcol, start = 1/6, end = 4/6))
+color = rev(rainbow(nbcol, start = 0/6, end = 4/6))
 zcol  = cut(topology, nbcol)
 persp3d(1:nrow(topology),1:ncol(topology),topology, col = color[zcol],theta = 30, phi = 20,ticktype = "detailed",xlab = "X", ylab = "Y", zlab = "Frequency")
-#play3d(spin3d(axis = c(0, 0, 1), rpm = 6), duration = 10)
+play3d(spin3d(axis = c(0, 0, 1), rpm = 6), duration = 10)
+#movie3d(spin3d(axis = c(0, 0, 1), rpm = 6), duration = 10, movie = "outputfile", dir = getwd())
